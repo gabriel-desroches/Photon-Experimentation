@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
+using Photon.Pun.Demo.PunBasics;
 
-public class PlayerManager : MonoBehaviourPunCallbacks
+public class PlayerManager : MonoBehaviourPunCallbacks, IPunObservable
 {
     [Tooltip("The Beams GameObject to control")]
     [SerializeField]
@@ -16,6 +17,22 @@ public class PlayerManager : MonoBehaviourPunCallbacks
     //True, when the user is firing
     bool IsFiring;
 
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            // We own this player: send the others our data
+            stream.SendNext(IsFiring);
+            stream.SendNext(Health);
+        }
+        else
+        {
+            // Network player, receive data
+            this.IsFiring = (bool)stream.ReceiveNext();
+            this.Health = (float)stream.ReceiveNext();
+        }
+    }
+
     void Awake()
     {
         if (beams == null)
@@ -27,6 +44,25 @@ public class PlayerManager : MonoBehaviourPunCallbacks
             beams.SetActive(false);
         }
     }
+
+    void Start()
+    {
+        CameraWork _cameraWork = this.gameObject.GetComponent<CameraWork>(); //double check this
+
+
+        if (_cameraWork != null)
+        {
+            if (photonView.IsMine)
+            {
+                _cameraWork.OnStartFollowing();
+            }
+        }
+        else
+        {
+            Debug.LogError("<Color=Red><a>Missing</a></Color> CameraWork Component on playerPrefab.", this);
+        }
+    }
+
 
     // Update is called once per frame
     void Update()
