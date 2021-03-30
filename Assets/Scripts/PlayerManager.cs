@@ -6,13 +6,16 @@ using Photon.Pun.Demo.PunBasics;
 
 public class PlayerManager : MonoBehaviourPunCallbacks, IPunObservable
 {
+
+    [Tooltip("The local player instance. Use this to know if the local player is represented in the Scene")]
+    public static GameObject LocalPlayerInstance;
+
     [Tooltip("The Beams GameObject to control")]
     [SerializeField]
     private GameObject beams;
 
     [Tooltip("The current Health of our player")]
     public float Health = 1f;
-
 
     //True, when the user is firing
     bool IsFiring;
@@ -35,6 +38,15 @@ public class PlayerManager : MonoBehaviourPunCallbacks, IPunObservable
 
     void Awake()
     {
+        // used in GameManager.cs: we keep track of the localPlayer instance to prevent instantiation when levels are synchronized
+        if (photonView.IsMine)
+        {
+            PlayerManager.LocalPlayerInstance = this.gameObject;
+        }
+        // #Critical
+        // we flag as don't destroy on load so that instance survives level synchronization, thus giving a seamless experience when levels load.
+        DontDestroyOnLoad(this.gameObject);
+
         if (beams == null)
         {
             Debug.LogError("<Color=Red><a>Missing</a></Color> Beams Reference.", this);
@@ -48,7 +60,6 @@ public class PlayerManager : MonoBehaviourPunCallbacks, IPunObservable
     void Start()
     {
         CameraWork _cameraWork = this.gameObject.GetComponent<CameraWork>(); //double check this
-
 
         if (_cameraWork != null)
         {
@@ -132,5 +143,12 @@ public class PlayerManager : MonoBehaviourPunCallbacks, IPunObservable
             }
         }
     }
+
+#if UNITY_5_4_OR_NEWER
+    void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode loadingMode)
+    {
+        this.CalledOnLevelWasLoaded(scene.buildIndex);
+    }
+#endif
 
 }
